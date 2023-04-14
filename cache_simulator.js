@@ -33,7 +33,6 @@ let cache = Array.from({ length: nsets }, (_, index) => {
 });
 
 
-
 console.log("bits para offset: " + n_bits_offset);
 console.log("bits para index: " + n_bits_index);
 console.log("bits para tag: " + n_bits_tag);
@@ -58,12 +57,18 @@ for(let i = 0; i < fileBuffer.length; i += 4) {
 			return !linha.validade;
 		});
 
-		if(index_via_vazia !== -1) { // Miss compulsorio
+		if(index_via_vazia !== -1) {
 			cache[conjunto_destino][index_via_vazia].validade = true;
 			cache[conjunto_destino][index_via_vazia].tag = tag_destino;
 		} else { // Miss de capacidade / Miss de conflito   === TRATAMENTO SÓ PARA MAPEAMENTO DIRETO
-			cache[conjunto_destino][0].validade = true;
-			cache[conjunto_destino][0].tag = tag_destino;
+			const via_a_ser_substituida = gerarIndexDeViaAleatorio(assoc)
+			// console.log("O conjunto: ", conjunto_destino, "está cheio, substituindo a via: ", via_a_ser_substituida)
+			// console.log("antes da substituição: ")
+			// console.log(cache[conjunto_destino])
+			cache[conjunto_destino][via_a_ser_substituida].validade = true;
+			cache[conjunto_destino][via_a_ser_substituida].tag = tag_destino;
+			// console.log("depois da substituição: ")
+			// console.log(cache[conjunto_destino])
 		}
 		misses++;
 	}
@@ -95,4 +100,8 @@ function getConjuntoDestino(endereco, numBitsOffset, numBitsMascara) {
   let resultado = parseInt(binario, 2) & mascara;
   
   return resultado;
+}
+
+function gerarIndexDeViaAleatorio(assoc) {
+	return Math.floor(Math.random() * assoc);
 }
