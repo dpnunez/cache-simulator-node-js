@@ -1,5 +1,6 @@
 // Formato de entrada:
 // 		cache_simulator <nsets> <bsize> <assoc> <substituição> <flag_saida> arquivo_de_entrada
+//		Formato padrao de saida: <Total de acessos> <Taxa de hit> <Taxa de miss> <Taxa de miss compulsório> <Taxa de miss de capacidade> <Taxa de miss de conflito>
 const fs = require('fs');
 
 // Leitura dos parametros
@@ -17,7 +18,10 @@ const n_bits_tag = 32 - n_bits_offset - n_bits_index;
 
 const tamanho_da_cache = nsets * bsize * assoc;
 
-let misses = 0;
+let compulsory_misses = 0;
+let capacity_misses = 0;
+let conflict_misses = 0;
+
 let hits = 0;
 let acessos = 0;
 
@@ -57,10 +61,12 @@ for(let i = 0; i < fileBuffer.length; i += 4) {
 			return !linha.validade;
 		});
 
-		if(index_via_vazia !== -1) {
+		const conjunto_sobrecarregado = index_via_vazia === -1
+
+		if(!conjunto_sobrecarregado) {
 			cache[conjunto_destino][index_via_vazia].validade = true;
 			cache[conjunto_destino][index_via_vazia].tag = tag_destino;
-		} else { // Miss de capacidade / Miss de conflito   === TRATAMENTO SÓ PARA MAPEAMENTO DIRETO
+		} else {
 			const via_a_ser_substituida = gerarIndexDeViaAleatorio(assoc)
 			// console.log("O conjunto: ", conjunto_destino, "está cheio, substituindo a via: ", via_a_ser_substituida)
 			// console.log("antes da substituição: ")
@@ -70,27 +76,31 @@ for(let i = 0; i < fileBuffer.length; i += 4) {
 			// console.log("depois da substituição: ")
 			// console.log(cache[conjunto_destino])
 		}
-		misses++;
+
+		// Classifica o misses
+		if(verificaCacheSobrecarregada()) {
+			capacity_misses++;
+		} else if(conjunto_sobrecarregado) {
+			conflict_misses++;
+		} else {
+			compulsory_misses++;
+		}
 	}
 
 	acessos++;
 }
 
 
-
+const misses = compulsory_misses + capacity_misses + conflict_misses;
 const miss_rate = misses / acessos;
 const hit_rate = hits / acessos;
-console.log('hits', hits)
-console.log('misses', misses)
 
-console.log('miss_rate: ', miss_rate);
-console.log('hit_rate', hit_rate)
-console.log('acessos', acessos)
+mostrarResultados(flag_saida);
 
 
 function getConjuntoDestino(endereco, numBitsOffset, numBitsMascara) {
 	let binario = endereco.toString(2).padStart(32, '0');
-  
+
   // Rotaciona o número numBitsOffset vezes à direita
   let rotacao = binario.slice(-numBitsOffset);
   binario = rotacao + binario.slice(0, -numBitsOffset);
@@ -104,4 +114,33 @@ function getConjuntoDestino(endereco, numBitsOffset, numBitsMascara) {
 
 function gerarIndexDeViaAleatorio(assoc) {
 	return Math.floor(Math.random() * assoc);
+}
+
+function mostrarResultados(flag_saida) {
+	switch(Number(flag_saida)) {
+		case 1:
+			const taxa_de_miss_compulsorio = (compulsory_misses / misses).toFixed(2);
+			const taxa_de_miss_de_capacidade = (capacity_misses / misses).toFixed(2);
+			const taxa_de_miss_de_conflito = (conflict_misses / misses).toFixed(2)
+			console.log(`${acessos} ${hit_rate.toFixed(4)} ${miss_rate.toFixed(4)} ${taxa_de_miss_compulsorio} ${taxa_de_miss_de_capacidade} ${taxa_de_miss_de_conflito}`)
+			break;
+		case 0:
+		default:
+			console.log('hits', hits)
+			console.log('misses', misses)
+
+			console.log('miss_rate: ', miss_rate);
+			console.log('hit_rate', hit_rate)
+			console.log('acessos', acessos)
+			console.log('cache: ', cache)
+			break;
+	}
+}
+
+function verificaCacheSobrecarregada() {
+	return cache.every((conjunto) => {
+		return conjunto.every((linha) => {
+			return linha.validade;
+		});
+	});
 }
