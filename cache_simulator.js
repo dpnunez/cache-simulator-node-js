@@ -43,7 +43,7 @@ const fileBuffer = fs.readFileSync(arquivo_de_entrada);
 for(let i = 0; i < fileBuffer.length; i += 4) {
   const line = fileBuffer.readInt32BE(i); 															// Leitura de 4 bytes (32 bits) por vez
   // Processa leitura
-	const conjunto_destino = getConjuntoDestino(line)											// Calcula o conjunto de destino
+	const conjunto_destino = getConjuntoDestino(line, n_bits_offset, n_bits_index);
 	const tag_destino = parseInt(line) >> (n_bits_offset + n_bits_index); // desloca os bits do index e do offset para a direita
 	const linha_em_binario = parseInt(line).toString(2).padStart(32, '0');// para visualizar o endereco em binario
 
@@ -83,10 +83,16 @@ console.log('hit_rate', hit_rate)
 console.log('acessos', acessos)
 
 
-function getConjuntoDestino(endereco) {
-	const endereco_em_binario = parseInt(endereco).toString(2).padStart(32, '0');
-	const mascaraPararIndex = (parseInt('1'.repeat(n_bits_index), 2) << n_bits_offset).toString(2).padStart(32, '0');
-	const index_em_decimal = parseInt(endereco_em_binario, 2) & parseInt(mascaraPararIndex, 2);
-	
-	return index_em_decimal;
+function getConjuntoDestino(endereco, numBitsOffset, numBitsMascara) {
+	let binario = endereco.toString(2).padStart(32, '0');
+  
+  // Rotaciona o número numBitsOffset vezes à direita
+  let rotacao = binario.slice(-numBitsOffset);
+  binario = rotacao + binario.slice(0, -numBitsOffset);
+  
+  // Faz uma máscara para pegar somente os numBitsMascara iniciais desse número
+  let mascara = parseInt('1'.repeat(numBitsMascara), 2);
+  let resultado = parseInt(binario, 2) & mascara;
+  
+  return resultado;
 }
