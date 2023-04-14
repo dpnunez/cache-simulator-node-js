@@ -44,7 +44,7 @@ readStream.on('data', (chunk) => {
   const lines = chunk.split('\n');
   for (const line of lines) {
     // Processa leitura
-		const conjunto_destino = parseInt(line) % nsets;
+		const conjunto_destino = getConjuntoDestino(line)
 		const tag_destino = parseInt(line) >> (n_bits_offset + n_bits_index); // desloca os bits do index e do offset para a direita
 		const linha_em_binario = parseInt(line).toString(2).padStart(32, '0'); // para visualizar o endereco em binario
 
@@ -93,3 +93,12 @@ readStream.on('end', () => {
 readStream.on('error', (err) => {
   console.error(err);
 });
+
+
+function getConjuntoDestino(endereco) {
+	const endereco_em_binario = parseInt(endereco).toString(2).padStart(32, '0');
+	const mascaraPararIndex = (parseInt('1'.repeat(n_bits_index), 2) << n_bits_offset).toString(2).padStart(32, '0');
+	const index_em_decimal = parseInt(endereco_em_binario, 2) & parseInt(mascaraPararIndex, 2);
+	
+	return index_em_decimal;
+}
