@@ -11,20 +11,18 @@ const substituição = process.argv[5];
 const flag_saida = process.argv[6];
 const arquivo_de_entrada = process.argv[7];
 
-
+// Calculos de quantidade de bits
 const n_bits_offset = Math.log2(bsize);
 const n_bits_index = Math.log2(nsets);
 const n_bits_tag = 32 - n_bits_offset - n_bits_index;
-
 const tamanho_da_cache = nsets * bsize * assoc;
 
-let compulsory_misses = 0;
-let capacity_misses = 0;
-let conflict_misses = 0;
-
+// Contadores de misses e hits
+let miss_compulsorio = 0;
+let miss_capacidade = 0;
+let miss_conflito = 0;
 let hits = 0;
 let acessos = 0;
-
 
 // Cria cache vazia
 let cache = Array.from({ length: nsets }, (_, index) => {
@@ -37,18 +35,13 @@ let cache = Array.from({ length: nsets }, (_, index) => {
 });
 
 
-console.log("bits para offset: " + n_bits_offset);
-console.log("bits para index: " + n_bits_index);
-console.log("bits para tag: " + n_bits_tag);
-
+// Processa a leitura do arquivo binario de entrada
 const fileBuffer = fs.readFileSync(arquivo_de_entrada);
 
 for(let i = 0; i < fileBuffer.length; i += 4) {
   const line = fileBuffer.readInt32BE(i); 															// Leitura de 4 bytes (32 bits) por vez
-  // Processa leitura
 	const conjunto_destino = getConjuntoDestino(line, n_bits_offset, n_bits_index);
 	const tag_destino = parseInt(line) >> (n_bits_offset + n_bits_index); // desloca os bits do index e do offset para a direita
-	const linha_em_binario = parseInt(line).toString(2).padStart(32, '0');// para visualizar o endereco em binario
 
 	const hit = cache[conjunto_destino].find((linha) => {
 		return linha.tag === tag_destino && !!linha.validade;
@@ -60,7 +53,6 @@ for(let i = 0; i < fileBuffer.length; i += 4) {
 		const index_via_vazia = cache[conjunto_destino].findIndex((linha) => {
 			return !linha.validade;
 		});
-
 		const conjunto_sobrecarregado = index_via_vazia === -1
 
 		if(!conjunto_sobrecarregado) {
@@ -68,36 +60,33 @@ for(let i = 0; i < fileBuffer.length; i += 4) {
 			cache[conjunto_destino][index_via_vazia].tag = tag_destino;
 		} else {
 			const via_a_ser_substituida = gerarIndexDeViaAleatorio(assoc)
-			// console.log("O conjunto: ", conjunto_destino, "está cheio, substituindo a via: ", via_a_ser_substituida)
-			// console.log("antes da substituição: ")
-			// console.log(cache[conjunto_destino])
 			cache[conjunto_destino][via_a_ser_substituida].validade = true;
 			cache[conjunto_destino][via_a_ser_substituida].tag = tag_destino;
-			// console.log("depois da substituição: ")
-			// console.log(cache[conjunto_destino])
 		}
 
 		// Classifica o misses
 		if(verificaCacheSobrecarregada()) {
-			capacity_misses++;
+			miss_capacidade++;
 		} else if(conjunto_sobrecarregado) {
-			conflict_misses++;
+			miss_conflito++;
 		} else {
-			compulsory_misses++;
+			miss_compulsorio++;
 		}
 	}
 
 	acessos++;
 }
 
-
-const misses = compulsory_misses + capacity_misses + conflict_misses;
+// Calcula as taxas de miss e hit
+const misses = miss_compulsorio + miss_capacidade + miss_conflito;
 const miss_rate = misses / acessos;
 const hit_rate = hits / acessos;
 
 mostrarResultados(flag_saida);
 
 
+
+// Helpers
 function getConjuntoDestino(endereco, numBitsOffset, numBitsMascara) {
 	let binario = endereco.toString(2).padStart(32, '0');
 
@@ -119,19 +108,24 @@ function gerarIndexDeViaAleatorio(assoc) {
 function mostrarResultados(flag_saida) {
 	switch(Number(flag_saida)) {
 		case 1:
-			const taxa_de_miss_compulsorio = (compulsory_misses / misses).toFixed(2);
-			const taxa_de_miss_de_capacidade = (capacity_misses / misses).toFixed(2);
-			const taxa_de_miss_de_conflito = (conflict_misses / misses).toFixed(2)
+			const taxa_de_miss_compulsorio = (miss_compulsorio / misses).toFixed(2);
+			const taxa_de_miss_de_capacidade = (miss_capacidade / misses).toFixed(2);
+			const taxa_de_miss_de_conflito = (miss_conflito / misses).toFixed(2)
 			console.log(`${acessos} ${hit_rate.toFixed(4)} ${miss_rate.toFixed(4)} ${taxa_de_miss_compulsorio} ${taxa_de_miss_de_capacidade} ${taxa_de_miss_de_conflito}`)
 			break;
 		case 0:
 		default:
+			console.log("bits para offset: " + n_bits_offset);
+			console.log("bits para index: " + n_bits_index);
+			console.log("bits para tag: " + n_bits_tag);
+
 			console.log('hits', hits)
 			console.log('misses', misses)
 
 			console.log('miss_rate: ', miss_rate);
 			console.log('hit_rate', hit_rate)
 			console.log('acessos', acessos)
+			console.log(`tamanho da cache: ${tamanho_da_cache} bytes`)
 			console.log('cache: ', cache)
 			break;
 	}
