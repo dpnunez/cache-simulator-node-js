@@ -34,7 +34,6 @@ let cache = Array.from({ length: nsets }, (_, index) => {
 	});
 });
 
-
 // Processa a leitura do arquivo binario de entrada
 const fileBuffer = fs.readFileSync(arquivo_de_entrada);
 
@@ -50,10 +49,10 @@ for(let i = 0; i < fileBuffer.length; i += 4) {
 	if(hit) {
 		hits++;
 	} else {
-		const index_via_vazia = cache[conjunto_destino].findIndex((linha) => {
+		const index_via_vazia = cache[conjunto_destino].findIndex((linha) => {	// Procura por uma via vazia
 			return !linha.validade;
 		});
-		const conjunto_sobrecarregado = index_via_vazia === -1
+		const conjunto_sobrecarregado = index_via_vazia === -1									// Se não encontrou uma via vazia, o conjunto está sobrecarregado
 
 		if(!conjunto_sobrecarregado) {
 			cache[conjunto_destino][index_via_vazia].validade = true;
@@ -85,18 +84,17 @@ const hit_rate = hits / acessos;
 mostrarResultados(flag_saida);
 
 
-
 // Helpers
 function getConjuntoDestino(endereco, numBitsOffset, numBitsMascara) {
-	let binario = endereco.toString(2).padStart(32, '0');
+	let binario = endereco.toString(2).padStart(32, '0');	// Converte o número para binário e preenche com 0s à esquerda até completar 32 bits
 
   // Rotaciona o número numBitsOffset vezes à direita
-  let rotacao = binario.slice(-numBitsOffset);
+  let rotacao = binario.slice(-numBitsOffset);					// Descarta os numBitsOffset bits iniciais
   binario = rotacao + binario.slice(0, -numBitsOffset);
   
   // Faz uma máscara para pegar somente os numBitsMascara iniciais desse número
-  let mascara = parseInt('1'.repeat(numBitsMascara), 2);
-  let resultado = parseInt(binario, 2) & mascara;
+  let mascara = parseInt('1'.repeat(numBitsMascara), 2); // Mascara para remover os bits da TAG
+  let resultado = parseInt(binario, 2) & mascara;				// Comparando com o operador AND, a máscara vai "zerar" todos os bits que não são do conjunto destino
   
   return resultado;
 }
